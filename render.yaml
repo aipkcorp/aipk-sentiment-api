@@ -1,6 +1,15 @@
 services:
   - type: web
-    name: aipk-sentiment
-    env: python
-    buildCommand: ""
+    name: aipk-sentiment-api
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+    plan: starter
+    autoDeploy: false
+    env: python
+    region: oregon
+    ports:
+      - 10000
