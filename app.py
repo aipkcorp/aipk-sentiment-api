@@ -1,37 +1,31 @@
 from flask import Flask, request, jsonify
-from transformers import pipeline
-from flask_cors import CORS
+import openai
+import os
 
 app = Flask(__name__)
-CORS(app)
 
-classifier = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-@app.route('/')
-def home():
-    return 'AIPK 감정 분석 서버 실행 중입니다.'
+@app.route("/")
+def index():
+    return "AIPK 감정 분석 API 서버입니다."
 
-@app.route('/analyze', methods=['POST'])
+@app.route("/analyze", methods=["POST"])
 def analyze():
+    data = request.get_json()
+    if not data or "text" not in data:
+        return jsonify({"error": "텍스트가 필요합니다."}), 400
+
+    prompt = data["text"]
     try:
-        data = request.get_json()
-        text = data.get("text", "")
-        if not text:
-            return jsonify({"error": "No text provided"}), 400
-
-        result = classifier(text)[0]
-        label = result['label']
-        score = round(float(result['score']), 3)
-        emotion = "긍정" if "4" in label or "5" in label else "부정"
-
-        return jsonify({
-            "emotion": emotion,
-            "score": score,
-            "raw_label": label
-        })
-
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        sentiment = response.choices[0].message.content.strip()
+        return jsonify({"sentiment": sentiment})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
