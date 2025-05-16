@@ -2,7 +2,9 @@ services:
   - type: web
     name: aipk-sentiment-api
     runtime: python
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: |
+  pip uninstall -y openai
+  pip install -r requirements.txt
     startCommand: "gunicorn app:app --bind 0.0.0.0:10000"
     envVars:
       - key: OPENAI_API_KEY
