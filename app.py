@@ -1,51 +1,51 @@
 from flask import Flask, request, jsonify
 import openai
 import os
-import json
 
 app = Flask(__name__)
 
+# ✅ 환경변수에 저장된 OpenAI API 키 불러오기
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
-@app.route("/")
-def index():
-    return "AIPK 감정 분석 API 서버입니다."
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    data = request.get_json()
-    if not data or "text" not in data:
-        return jsonify({"error": "텍스트가 필요합니다."}), 400
-
-    prompt = f"""
-    다음 문장을 감정적으로 분석해서 0.0부터 1.0 사이의 점수(score)를 매기고, 
-    그에 맞는 위로 멘트(sentiment)를 함께 작성해주세요. 
-    아래 형식의 JSON으로만 응답해 주세요:
-
-    {{
-        "score": (0.0 ~ 1.0 숫자),
-        "sentiment": "위로 멘트"
-    }}
-
-    문장: "{data['text']}"
-    """
-
     try:
+        data = request.get_json()
+        user_text = data.get("text", "")
+
+        if not user_text:
+            return jsonify({"error": "No input text provided."}), 400
+
+        # GPT에게 감정 점수 및 위로 메시지를 생성하도록 요청
+        prompt = f"""
+        너는 감정 분석을 수행하는 AI야. 사용자의 문장을 분석해서 감정 점수를 0.0~1.0 사이로 판단하고,
+        해당 감정에 어울리는 위로 메시지를 작성해. 다음 형식의 JSON으로 출력해:
+        {{"score": float, "sentiment": "string"}}
+
+        예시 입력: "아 진짜 너무 힘들고 우울해"
+        예시 출력: {{"score": 0.87, "sentiment": "많이 힘들었죠. 당신의 마음을 이해해요."}}
+
+        이제 다음 문장을 분석해줘:
+        문장: "{user_text}"
+        """
+
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
+                {"role": "system", "content": "너는 감정 분석기 역할을 해."},
                 {"role": "user", "content": prompt}
             ]
         )
-        result = response.choices[0].message.content.strip()
 
-        # GPT 응답을 JSON으로 파싱
-        result_json = json.loads(result)
+        reply = response['choices'][0]['message']['content']
 
-        return jsonify(result_json)
+        # JSON 형식 파싱
+        result = eval(reply.strip())
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(debug=True)
