@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import openai
 import os
+import json  # ✅ 추가된 부분
 
 app = Flask(__name__)
 
@@ -39,8 +40,8 @@ def analyze():
 
         reply = response['choices'][0]['message']['content']
 
-        # JSON 형식 파싱
-        result = eval(reply.strip())
+        # ✅ 안전하게 JSON 파싱
+        result = json.loads(reply.strip())
 
         return jsonify(result)
 
